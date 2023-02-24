@@ -1,0 +1,98 @@
+version: '2'
+services:
+  scompute:
+    build:
+      context: ../server/
+      dockerfile: test.Dockerfile
+    image: scompute:1.0
+    depends_on:
+      - postgresdb
+    ports:
+      - 8090:8090
+    environment:
+      - APP_PORT=8090
+      - APP_ADDRESS=0.0.0.0
+      - SWASH_PRICING_HOST=http://pricing:3000
+      - SWASH_PRICING_API_KEY=
+      - SWASH_SERVICES_HOST=http://services:3021
+      - SWASH_SERVICES_API_KEY=
+      - SWASH_FOUNTAIN_HOST=http://fountain:3009
+      - ETH_PRIVATE_KEY=privateKey
+      - AUTH_ETH_PUBLIC_KEY=publicKey
+      - AWS_REGION=eu-central-1
+      - DATABASE_HOST=postgresdb
+      - DATABASE_PORT=5432
+      - DATABASE_USER=swash
+      - DATABASE_PASS=swash
+      - DATABASE_NAME=swash_scomp_client
+
+  services:
+    build:
+      context: ./services/
+      dockerfile: test.Dockerfile
+    image: services:1.0
+    depends_on:
+      - postgresdb
+    ports:
+      - 3020:3020
+    environment:
+      - APP_PORT=3020
+      - APP_ADDRESS=0.0.0.0
+      - PRIVATE_APP_PORT=3021
+      - PRIVATE_APP_ADDRESS=0.0.0.0
+      - APP_ENCRYPTION_KEY=
+      - APP_AUTH_API_KEY=
+      - APP_SIGNING_PRIVATE_KEY=privateKey
+      - DATABASE_HOST=mysqldb
+      - DATABASE_PORT=3306
+      - DATABASE_USER=swash
+      - DATABASE_PASS=swash
+      - DATABASE_NAME=swash_services
+  pricing:
+    build:
+      context: ./aws-pricing-api/
+      dockerfile: test.Dockerfile
+    image: pricing:1.0
+    environment:
+      - APP_PORT=3000
+      - APP_ADDRESS=0.0.0.0
+      - API_KEY=
+  fountain:
+    build:
+      context: ./fountain/
+      dockerfile: test.Dockerfile
+    image: fountain:1.0
+    depends_on:
+      - postgresdb
+    environment:
+      - APP_PORT=3009
+      - APP_ADDRESS=0.0.0.0
+      - DEFAULT_BLOCK_NUMBER=1000
+      - PURCHASE_CONTRACT_ADDRESS=0xA195a7D7C9b4400FAba262503b6B083cB37CF4Aa
+      - BUY_TOPIC_HASH=0xc7a51882cbafa9ed749fafbbdf4073afe524acf8b1bdb87926eda2097d2f7fb9
+      - NETWORK_PROVIDER=wss://goerli.infura.io/ws/v3/45a26c26f73648fc9e21496dd1bb8ad2
+      - DATABASE_HOST=postgresdb
+      - DATABASE_PORT=5432
+      - DATABASE_USER=swash
+      - DATABASE_PASS=swash
+      - DATABASE_NAME=swash_provider
+  postgresdb:
+    build:
+      context: .
+      dockerfile: db.Dockerfile
+    restart: always
+    volumes:
+      - ./var/pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=swash
+      - POSTGRES_PASSWORD=swash
+  mysql:
+    image: mysql:5.7
+    container_name: mysqldb
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 'swash'
+      MYSQL_DATABASE: 'swash_services'
+      MYSQL_USER: 'swash'
+      MYSQL_PASSWORD: 'swash'
