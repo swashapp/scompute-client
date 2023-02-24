@@ -1,0 +1,11 @@
+{
+  "apps": [
+    {
+      "name": "scomp-v1",
+      "script": "dist/main.js",
+      "instances": "max",
+      "exec_mode": "cluster",
+      "env": { "NODE_ENV": "production" }
+    }
+  ]
+}
