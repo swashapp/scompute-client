@@ -28,3 +28,7 @@ tsconfig.tsbuildinfo
 .idea
 
 /docker/ghost_data/
+/docker/fountain/
+/docker/services/
+/docker/aws-pricing-api/
+/docker/var/
