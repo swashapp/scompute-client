@@ -104,7 +104,7 @@ class sComputeClient {
                             try {
                                 const tx = await purchase.request(res, token);
                                 if (tx)
-                                    await tx.wait();
+                                    await tx.wait(1);
                                 else
                                     throw Error('Failed to purchase');
                             }
