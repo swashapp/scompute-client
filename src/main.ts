@@ -162,6 +162,7 @@ export class sComputeClient {
             .POST<PurchaseParams>(`${URI.PIPELINE}/start`, {
               pipelineName: name,
               inputDataFile,
+              network: Number(purchaseConfig.networkID),
             })
             .then(async (res: PurchaseParams) => {
               try {
