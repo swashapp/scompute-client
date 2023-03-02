@@ -99,6 +99,7 @@ class sComputeClient {
                             .POST(`${service_1.URI.PIPELINE}/start`, {
                             pipelineName: name,
                             inputDataFile,
+                            network: Number(purchaseConfig.networkID),
                         })
                             .then(async (res) => {
                             try {
