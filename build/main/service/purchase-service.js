@@ -5,10 +5,12 @@ const contracts_1 = require("@ethersproject/contracts");
 const units_1 = require("@ethersproject/units");
 const router_sdk_1 = require("@uniswap/router-sdk");
 const sdk_core_1 = require("@uniswap/sdk-core");
+const ethers_1 = require("ethers");
 const swash_order_router_1 = require("swash-order-router");
 const erc20_abi_1 = require("../constants/erc20-abi");
 const purchase_abi_1 = require("../constants/purchase-abi");
 const purchase_config_1 = require("../constants/purchase-config");
+const events_1 = require("../events");
 class Purchase {
     constructor(networkID, provider, signer) {
         this.networkID = networkID;
@@ -78,35 +80,50 @@ class Purchase {
         }
         return paths;
     }
-    async request(params, token) {
-        const routePath = await this.getRoutePath(token, params.price);
+    async estimateGas(params, token, routePath) {
+        let gas = ethers_1.BigNumber.from(3000000);
+        try {
+            if (token.isNative) {
+                gas =
+                    await this.purchaseContract.estimateGas.buyDataProductWithUniswapEth({
+                        requestHash: params.requestHash,
+                        time: params.time,
+                        price: (0, units_1.parseEther)(params.price.toString()),
+                        productType: params.productType,
+                    }, params.signature, params.signer, routePath);
+            }
+            else {
+                gas =
+                    await this.purchaseContract.estimateGas.buyDataProductWithUniswapErc20({
+                        requestHash: params.requestHash,
+                        time: params.time,
+                        price: (0, units_1.parseEther)(params.price.toString()),
+                        productType: params.productType,
+                    }, params.signature, params.signer, token.tokenName, routePath);
+            }
+        }
+        catch (err) {
+            console.log(err);
+            events_1.sComputeClientEmitter.emit('warning', err.reason || err.error?.message);
+        }
+        return gas.mul(120).div(100);
+    }
+    async request(params, token, routePath, gasLimit) {
         if (token.isNative) {
-            const gas = await this.purchaseContract.estimateGas.buyDataProductWithUniswapEth({
-                requestHash: params.requestHash,
-                time: params.time,
-                price: (0, units_1.parseEther)(params.price.toString()),
-                productType: params.productType,
-            }, params.signature, params.signer, routePath);
             return await this.purchaseContract.buyDataProductWithUniswapEth({
                 requestHash: params.requestHash,
                 time: params.time,
                 price: (0, units_1.parseEther)(params.price.toString()),
                 productType: params.productType,
-            }, params.signature, params.signer, routePath, { gasLimit: gas.mul(120).div(100) });
+            }, params.signature, params.signer, routePath, { gasLimit });
         }
         else {
-            const gas = await this.purchaseContract.estimateGas.buyDataProductWithUniswapErc20({
-                requestHash: params.requestHash,
-                time: params.time,
-                price: (0, units_1.parseEther)(params.price.toString()),
-                productType: params.productType,
-            }, params.signature, params.signer, token.tokenName, routePath);
             return await this.purchaseContract.buyDataProductWithUniswapErc20({
                 requestHash: params.requestHash,
                 time: params.time,
                 price: (0, units_1.parseEther)(params.price.toString()),
                 productType: params.productType,
-            }, params.signature, params.signer, token.tokenName, routePath, { gasLimit: gas.mul(120).div(100) });
+            }, params.signature, params.signer, token.tokenName, routePath, { gasLimit });
         }
     }
 }

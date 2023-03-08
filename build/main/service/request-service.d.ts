@@ -4,9 +4,10 @@ import { AuthSessionConfig, sComputeClientOptions, SignatureOBJ } from '../types
 export declare enum URI {
     USER = "user",
     PIPELINE = "pipeline",
+    EXECUTION = "execution",
     SIGNATURE = "public/signature",
-    CODE_FILE = "files/code",
-    DATA_FILE = "files/data"
+    CODE_FILE = "file/code",
+    DATA_FILE = "file/data"
 }
 export declare function encodeQueryString(params: {
     [key: string]: string | boolean | number;
