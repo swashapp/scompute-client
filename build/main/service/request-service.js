@@ -34,9 +34,10 @@ var URI;
 (function (URI) {
     URI["USER"] = "user";
     URI["PIPELINE"] = "pipeline";
+    URI["EXECUTION"] = "execution";
     URI["SIGNATURE"] = "public/signature";
-    URI["CODE_FILE"] = "files/code";
-    URI["DATA_FILE"] = "files/data";
+    URI["CODE_FILE"] = "file/code";
+    URI["DATA_FILE"] = "file/data";
 })(URI = exports.URI || (exports.URI = {}));
 function encodeQueryString(params) {
     return Object.keys(params)

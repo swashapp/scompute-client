@@ -30,41 +30,47 @@ class sComputeClient {
             with: (name) => {
                 const sdk = this;
                 return {
-                    execution: (executionId) => {
+                    execution: (id) => {
                         return {
                             getSteps: () => {
-                                return sdk.request.GET(`${service_1.URI.PIPELINE}/steps`, {
-                                    executionId,
+                                return sdk.request.GET(`${service_1.URI.EXECUTION}/steps`, {
+                                    id,
                                     pipelineName: name,
                                 });
                             },
                             stop: () => {
-                                return sdk.request.POST(`${service_1.URI.PIPELINE}/stop`, {
+                                return sdk.request.POST(`${service_1.URI.EXECUTION}/stop`, {
                                     pipelineName: name,
-                                    executionId,
+                                    id,
                                 });
                             },
                             retry: () => {
-                                return sdk.request.POST(`${service_1.URI.PIPELINE}/retry`, {
+                                return sdk.request.POST(`${service_1.URI.EXECUTION}/retry`, {
                                     pipelineName: name,
-                                    executionId,
+                                    id,
                                 });
                             },
-                            get: () => sdk.request.GET(`${service_1.URI.PIPELINE}/execution`, {
+                            delete: () => {
+                                return sdk.request.DELETE(service_1.URI.EXECUTION, {
+                                    pipelineName: name,
+                                    id,
+                                });
+                            },
+                            get: () => sdk.request.GET(service_1.URI.EXECUTION, {
                                 pipelineName: name,
-                                executionId,
+                                id,
                             }),
                             downloadModel: async () => {
-                                const res = await sdk.request.DOWNLOAD(`${service_1.URI.PIPELINE}/model`, {
+                                const res = await sdk.request.DOWNLOAD(`${service_1.URI.EXECUTION}/model`, {
                                     pipelineName: name,
-                                    executionId,
+                                    id,
                                 });
                                 return await res.blob();
                             },
                             downloadLog: async () => {
-                                const res = await sdk.request.DOWNLOAD(`${service_1.URI.PIPELINE}/log`, {
+                                const res = await sdk.request.DOWNLOAD(`${service_1.URI.EXECUTION}/log`, {
                                     pipelineName: name,
-                                    executionId,
+                                    id,
                                 });
                                 return await res.blob();
                             },
@@ -84,7 +90,7 @@ class sComputeClient {
                         });
                     },
                     getExecutions: () => {
-                        return sdk.request.GET(`${service_1.URI.PIPELINE}/execution/list`, {
+                        return sdk.request.GET(`${service_1.URI.EXECUTION}/list`, {
                             pipelineName: name,
                         });
                     },
@@ -103,15 +109,26 @@ class sComputeClient {
                         })
                             .then(async (res) => {
                             try {
-                                const tx = await purchase.request(res, token);
-                                if (tx)
+                                const routePath = await purchase.getRoutePath(token, res.price);
+                                const gasLimit = await purchase.estimateGas(res, token, routePath);
+                                const tx = await purchase.request(res, token, routePath, gasLimit);
+                                if (tx) {
+                                    console.log(tx);
+                                    await this.request.PUT(service_1.URI.EXECUTION, {
+                                        pipelineName: name,
+                                        id: res.id,
+                                        txId: tx.hash,
+                                    });
                                     await tx.wait(1);
-                                else
+                                }
+                                else {
                                     throw Error('Failed to purchase');
+                                }
                             }
                             catch (err) {
                                 console.log(err);
-                                throw Error('Failed to purchase');
+                                const reason = err.reason || err.error?.message;
+                                throw Error(reason || 'Failed to purchase');
                             }
                         });
                     },

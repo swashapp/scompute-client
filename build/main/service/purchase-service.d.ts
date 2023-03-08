@@ -1,4 +1,4 @@
-import { providers, Signer } from 'ethers';
+import { BigNumber, providers, Signer } from 'ethers';
 import { PurchaseParams, TokenInfo } from '../types';
 export declare class Purchase {
     private purchaseContract;
@@ -10,6 +10,7 @@ export declare class Purchase {
     getToken(tokenName: string): Promise<TokenInfo>;
     private needToBeApproved;
     approve(token: TokenInfo, account: string | null | undefined): Promise<any>;
-    private getRoutePath;
-    request(params: PurchaseParams, token: TokenInfo): Promise<any>;
+    getRoutePath(token: TokenInfo, priceInDoller: number): Promise<Array<string>>;
+    estimateGas(params: PurchaseParams, token: TokenInfo, routePath: string[]): Promise<any>;
+    request(params: PurchaseParams, token: TokenInfo, routePath: string[], gasLimit: BigNumber): Promise<any>;
 }
