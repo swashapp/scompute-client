@@ -72,46 +72,56 @@ export class sComputeClient {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const sdk = this;
       return {
-        execution: (executionId: string): ExecutionFn => {
+        execution: (id: string): ExecutionFn => {
           return {
             getSteps: (): Promise<ExecutionStep[]> => {
-              return sdk.request.GET<ExecutionStep[]>(`${URI.PIPELINE}/steps`, {
-                executionId,
-                pipelineName: name,
-              });
+              return sdk.request.GET<ExecutionStep[]>(
+                `${URI.EXECUTION}/steps`,
+                {
+                  id,
+                  pipelineName: name,
+                },
+              );
             },
             stop: (): Promise<void> => {
-              return sdk.request.POST(`${URI.PIPELINE}/stop`, {
+              return sdk.request.POST(`${URI.EXECUTION}/stop`, {
                 pipelineName: name,
-                executionId,
+                id,
               });
             },
 
             retry: (): Promise<void> => {
-              return sdk.request.POST(`${URI.PIPELINE}/retry`, {
+              return sdk.request.POST(`${URI.EXECUTION}/retry`, {
                 pipelineName: name,
-                executionId,
+                id,
+              });
+            },
+
+            delete: (): Promise<void> => {
+              return sdk.request.DELETE(URI.EXECUTION, {
+                pipelineName: name,
+                id,
               });
             },
 
             get: (): Promise<ExecutionDetails> =>
-              sdk.request.GET(`${URI.PIPELINE}/execution`, {
+              sdk.request.GET(URI.EXECUTION, {
                 pipelineName: name,
-                executionId,
+                id,
               }),
 
             downloadModel: async (): Promise<Blob> => {
-              const res = await sdk.request.DOWNLOAD(`${URI.PIPELINE}/model`, {
+              const res = await sdk.request.DOWNLOAD(`${URI.EXECUTION}/model`, {
                 pipelineName: name,
-                executionId,
+                id,
               });
               return await res.blob();
             },
 
             downloadLog: async (): Promise<Blob> => {
-              const res = await sdk.request.DOWNLOAD(`${URI.PIPELINE}/log`, {
+              const res = await sdk.request.DOWNLOAD(`${URI.EXECUTION}/log`, {
                 pipelineName: name,
-                executionId,
+                id,
               });
               return await res.blob();
             },
@@ -136,12 +146,9 @@ export class sComputeClient {
         },
 
         getExecutions: (): Promise<ExecutionDetails[]> => {
-          return sdk.request.GET<ExecutionDetails[]>(
-            `${URI.PIPELINE}/execution/list`,
-            {
-              pipelineName: name,
-            },
-          );
+          return sdk.request.GET<ExecutionDetails[]>(`${URI.EXECUTION}/list`, {
+            pipelineName: name,
+          });
         },
 
         start: async (
@@ -166,12 +173,33 @@ export class sComputeClient {
             })
             .then(async (res: PurchaseParams) => {
               try {
-                const tx = await purchase.request(res, token);
-                if (tx) await tx.wait(1);
-                else throw Error('Failed to purchase');
+                const routePath = await purchase.getRoutePath(token, res.price);
+                const gasLimit = await purchase.estimateGas(
+                  res,
+                  token,
+                  routePath,
+                );
+                const tx = await purchase.request(
+                  res,
+                  token,
+                  routePath,
+                  gasLimit,
+                );
+                if (tx) {
+                  console.log(tx);
+                  await this.request.PUT(URI.EXECUTION, {
+                    pipelineName: name,
+                    id: res.id,
+                    txId: tx.hash,
+                  });
+                  await tx.wait(1);
+                } else {
+                  throw Error('Failed to purchase');
+                }
               } catch (err) {
                 console.log(err);
-                throw Error('Failed to purchase');
+                const reason = err.reason || err.error?.message;
+                throw Error(reason || 'Failed to purchase');
               }
             });
         },

@@ -19,7 +19,9 @@ export interface PurchaseConfig {
     networkID: string;
 }
 export declare enum PipelineExecutionStatus {
+    DRAFT = "Draft",
     PENDING = "Pending",
+    CANCELED = "Canceled",
     EXECUTING = "Executing",
     FAILED = "Failed",
     STOPPED = "Stopped",
@@ -34,12 +36,11 @@ export interface ExecutionStep {
     reason: string;
 }
 export interface ExecutionDetails {
-    name: string;
-    description: string;
     id: string;
     status: PipelineExecutionStatus | string;
     reason: string;
     start: Date;
+    created: Date;
 }
 export interface FileObject {
     name: string;
@@ -87,6 +88,7 @@ export interface ExecutionFn {
     getSteps: () => Promise<ExecutionStep[]>;
     stop: () => Promise<void>;
     retry: () => Promise<void>;
+    delete: () => Promise<void>;
     downloadModel: () => Promise<Blob>;
     downloadLog: () => Promise<Blob>;
 }
@@ -124,6 +126,7 @@ export interface SignatureOBJ {
     nonce: number;
 }
 export interface PurchaseParams {
+    id: string;
     requestHash: string;
     signature: string;
     time: string;
