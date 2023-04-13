@@ -1,6 +1,6 @@
 {
   "name": "scompute-client",
-  "version": "1.3.24",
+  "version": "1.3.25",
   "description": "",
   "private": true,
   "license": "MIT",
@@ -35,7 +35,7 @@
     "ethers": "^5.7.1",
     "form-data": "^4.0.0",
     "jsonwebtoken": "^9.0.0",
-    "swash-order-router": "github:swashapp/smart-order-router#e7fa858daa3ed19d7a21ef90d58cc7c5fc71b506",
+    "swash-order-router": "github:swashapp/smart-order-router#28badba398dcc987c205898454f23f54e440a2c4",
     "web3": "^1.7.5"
   },
   "devDependencies": {
