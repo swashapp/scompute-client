@@ -12,8 +12,7 @@
   "outDir": "build",
   "type": "commonjs",
   "scripts": {
-    "test": "cd docker; bash up-test-env.sh",
-    "jest": "jest",
+    "test": "jest",
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
@@ -43,7 +42,6 @@
     "@types/node": "^18.7.23",
     "@typescript-eslint/eslint-plugin": "^5.35.1",
     "@typescript-eslint/parser": "^5.35.1",
-    "@uniswap/router-sdk": "1.0.5",
     "cross-env": "^7.0.3",
     "cross-var": "^1.1.0",
     "eslint": "^7.20.0",
