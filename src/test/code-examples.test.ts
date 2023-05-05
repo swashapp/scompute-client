@@ -147,10 +147,8 @@ describe('Computation: Pipeline management', () => {
 
   beforeAll(async () => {
     const privateKey = process.env.PRIVATE_KEY;
-    const rpcUrl =
-      process.env.RPC_URL ||
-      'wss://goerli.infura.io/ws/v3/45a26c26f73648fc9e21496dd1bb8ad2';
-    provider = new providers.WebSocketProvider(rpcUrl);
+    const providerURL = process.env.NETWORK_PROVIDER;
+    provider = new providers.WebSocketProvider(providerURL);
     wallet = new Wallet(privateKey, provider);
     networkID = process.env.NETWORK || '5';
     tokenName = process.env.TOKEN || 'SWASH';

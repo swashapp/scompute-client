@@ -67,16 +67,14 @@ yarn run build
 
 ### Test
 
-To run code-example tests, you have to set docker/config.cfg at first:
+To run code-example tests, you have to create a `.env.test` file in the root of project. Then you need to provide following configuration to communicate with Swash sCompute test environment and execute your end-to-end tests.
 
 ```bash
-BRANCH=                                     # Required, Branch name of swash services, fountain and pricing project to clone from git
-GIT_USERNAME=                               # Required, Git username
-GIT_PASSWORD=                               # Required, Git password
-SCOMPUTE_PORT=                              # Required, Port number for scompute to listen on
-SERVICES_PORT=                              # Required, Port number for services to listen on
+HOST=                                       # Required, URL address of client api test environment
+SERVICES_HOST=                              # Required, URL address of Swash services test environment
 PRIVATE_KEY=                                # Required, Your ethereum wallet(with available tokens) private key
-PUBLIC_KEY=                                 # Required, Your ethereum wallet public key
+NETWORK=                                    # Required, Network ID(chain ID). e.g. 5
+NETWORK_PROVIDER=                           # Required, Network provider URL. e.g. wss://goerli.infura.io/ws/v3/...
 TOKEN=                                      # Required, Token name to do purchase
 
 ```
