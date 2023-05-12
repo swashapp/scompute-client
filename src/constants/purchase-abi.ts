@@ -6,9 +6,9 @@ export const PURCHASE_ABI = [
       {
         components: [
           { internalType: 'string', name: 'requestHash', type: 'string' },
-          { internalType: 'string', name: 'time', type: 'string' },
           { internalType: 'uint256', name: 'price', type: 'uint256' },
           { internalType: 'string', name: 'productType', type: 'string' },
+          { internalType: 'uint256', name: 'timeStamp', type: 'uint256' },
         ],
         indexed: false,
         internalType: 'struct SwashPurchaseUpgradable.ProductOb',
@@ -346,9 +346,9 @@ export const PURCHASE_ABI = [
       {
         components: [
           { internalType: 'string', name: 'requestHash', type: 'string' },
-          { internalType: 'string', name: 'time', type: 'string' },
           { internalType: 'uint256', name: 'price', type: 'uint256' },
           { internalType: 'string', name: 'productType', type: 'string' },
+          { internalType: 'uint256', name: 'timeStamp', type: 'uint256' },
         ],
         internalType: 'struct SwashPurchaseUpgradable.ProductOb',
         name: 'productOb',
@@ -369,9 +369,9 @@ export const PURCHASE_ABI = [
       {
         components: [
           { internalType: 'string', name: 'requestHash', type: 'string' },
-          { internalType: 'string', name: 'time', type: 'string' },
           { internalType: 'uint256', name: 'price', type: 'uint256' },
           { internalType: 'string', name: 'productType', type: 'string' },
+          { internalType: 'uint256', name: 'timeStamp', type: 'uint256' },
         ],
         internalType: 'struct SwashPurchaseUpgradable.ProductOb',
         name: 'productOb',
@@ -448,9 +448,9 @@ export const PURCHASE_ABI = [
     name: 'dataProductPurchasedUsersMap',
     outputs: [
       { internalType: 'string', name: 'requestHash', type: 'string' },
-      { internalType: 'string', name: 'time', type: 'string' },
       { internalType: 'uint256', name: 'price', type: 'uint256' },
       { internalType: 'bytes', name: 'signature', type: 'bytes' },
+      { internalType: 'uint256', name: 'timeStamp', type: 'uint256' },
     ],
     stateMutability: 'view',
     type: 'function',
@@ -531,13 +531,6 @@ export const PURCHASE_ABI = [
     type: 'function',
   },
   {
-    inputs: [],
-    name: 'getTokenList',
-    outputs: [{ internalType: 'string[]', name: '', type: 'string[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
     inputs: [{ internalType: 'string', name: 'tokenName', type: 'string' }],
     name: 'getTokenOb',
     outputs: [
@@ -550,6 +543,24 @@ export const PURCHASE_ABI = [
         internalType: 'struct SwashPurchaseUpgradable.TokenStruct',
         name: '',
         type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'getTokenObList',
+    outputs: [
+      {
+        components: [
+          { internalType: 'string', name: 'name', type: 'string' },
+          { internalType: 'address', name: 'tokenAddress', type: 'address' },
+          { internalType: 'bool', name: 'isNative', type: 'bool' },
+        ],
+        internalType: 'struct SwashPurchaseUpgradable.TokenStruct[]',
+        name: '',
+        type: 'tuple[]',
       },
     ],
     stateMutability: 'view',
@@ -584,6 +595,7 @@ export const PURCHASE_ABI = [
         name: '_swashToBaseTokenPath',
         type: 'address[]',
       },
+      { internalType: 'uint256', name: '_purchaseTimeWindow', type: 'uint256' },
     ],
     name: 'initialize',
     outputs: [],
@@ -595,9 +607,9 @@ export const PURCHASE_ABI = [
       {
         components: [
           { internalType: 'string', name: 'requestHash', type: 'string' },
-          { internalType: 'string', name: 'time', type: 'string' },
           { internalType: 'uint256', name: 'price', type: 'uint256' },
           { internalType: 'string', name: 'productType', type: 'string' },
+          { internalType: 'uint256', name: 'timeStamp', type: 'uint256' },
         ],
         internalType: 'struct SwashPurchaseUpgradable.ProductOb',
         name: 'productOb',
@@ -660,6 +672,13 @@ export const PURCHASE_ABI = [
   {
     inputs: [{ internalType: 'string', name: '_type', type: 'string' }],
     name: 'priceInSwashByType',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'purchaseTimeWindow',
     outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function',
@@ -730,6 +749,15 @@ export const PURCHASE_ABI = [
       { internalType: 'string[]', name: 'licenseModelNames', type: 'string[]' },
     ],
     name: 'setLicenseModels',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'uint256', name: '_purchaseTimeWindow', type: 'uint256' },
+    ],
+    name: 'setPurchaseTimeWindow',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

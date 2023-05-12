@@ -175,7 +175,7 @@ export class Purchase {
           await this.purchaseContract.estimateGas.buyDataProductWithUniswapEth(
             {
               requestHash: params.requestHash,
-              time: params.time,
+              timeStamp: params.time,
               price: parseEther(params.price.toString()),
               productType: params.productType,
             },
@@ -188,7 +188,7 @@ export class Purchase {
           await this.purchaseContract.estimateGas.buyDataProductWithUniswapErc20(
             {
               requestHash: params.requestHash,
-              time: params.time,
+              timeStamp: params.time,
               price: parseEther(params.price.toString()),
               productType: params.productType,
             },
@@ -215,7 +215,7 @@ export class Purchase {
       return await this.purchaseContract.buyDataProductWithUniswapEth(
         {
           requestHash: params.requestHash,
-          time: params.time,
+          timeStamp: params.time,
           price: parseEther(params.price.toString()),
           productType: params.productType,
         },
@@ -228,7 +228,7 @@ export class Purchase {
       return await this.purchaseContract.buyDataProductWithUniswapErc20(
         {
           requestHash: params.requestHash,
-          time: params.time,
+          timeStamp: params.time,
           price: parseEther(params.price.toString()),
           productType: params.productType,
         },
