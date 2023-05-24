@@ -20,5 +20,8 @@ export declare const SWASH_TOKEN_ADDRESS: {
     1: string;
     5: string;
     4: string;
+    100: string;
+    137: string;
+    56: string;
     97: string;
 };
