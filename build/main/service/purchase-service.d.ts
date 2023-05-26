@@ -10,7 +10,7 @@ export declare class Purchase {
     getToken(tokenName: string): Promise<TokenInfo>;
     private needToBeApproved;
     approve(token: TokenInfo, account: string | null | undefined): Promise<any>;
-    getRoutePath(token: TokenInfo, priceInDollar: number): Promise<Array<string>>;
+    getRoutePath(token: TokenInfo, priceInDoller: number): Promise<Array<string>>;
     estimateGas(params: PurchaseParams, token: TokenInfo, routePath: string[]): Promise<any>;
     request(params: PurchaseParams, token: TokenInfo, routePath: string[], gasLimit: BigNumber): Promise<any>;
 }
