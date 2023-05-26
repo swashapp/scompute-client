@@ -50,8 +50,8 @@ class Purchase {
             }
         }
     }
-    async getRoutePath(token, priceInDoller) {
-        const priceInSwash = await this.purchaseContract.priceInSwash((0, units_1.parseEther)(priceInDoller.toString()));
+    async getRoutePath(token, priceInDollar) {
+        const priceInSwash = await this.purchaseContract.priceInSwash((0, units_1.parseEther)(priceInDollar.toString()));
         if (token.isSwash) {
             return [token.tokenAddress, token.tokenAddress];
         }

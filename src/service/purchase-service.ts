@@ -107,10 +107,10 @@ export class Purchase {
 
   public async getRoutePath(
     token: TokenInfo,
-    priceInDoller: number,
+    priceInDollar: number,
   ): Promise<Array<string>> {
     const priceInSwash = await this.purchaseContract.priceInSwash(
-      parseEther(priceInDoller.toString()),
+      parseEther(priceInDollar.toString()),
     );
     if (token.isSwash) {
       return [token.tokenAddress, token.tokenAddress];
