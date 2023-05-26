@@ -19,30 +19,53 @@ class Purchase {
         this.purchaseContract = new contracts_1.Contract(purchase_config_1.PURCHASE_CONTRACT_ADDRESS[networkID], purchase_abi_1.PURCHASE_ABI, signer);
         this.SWASH_TOKEN = new sdk_core_1.Token(Number(this.networkID), purchase_config_1.SWASH_TOKEN_ADDRESS[this.networkID], 18, 'SWASH', 'SWASH');
     }
-    async getToken(tokenName) {
-        const tokenMap = await this.purchaseContract.tokenMap(tokenName);
-        const tokenAddress = tokenMap[1];
-        const isSwash = tokenAddress?.toLowerCase() ===
-            purchase_config_1.SWASH_TOKEN_ADDRESS[this.networkID].toLowerCase();
+    async getTokenOut(tokenAddress, isNative) {
+        let token = null;
+        let isSwash = false;
+        if (isNative) {
+            token = swash_order_router_1.WRAPPED_NATIVE_CURRENCY[Number(this.networkID)];
+        }
+        else if (tokenAddress.toLowerCase() === this.SWASH_TOKEN.address.toLowerCase()) {
+            token = this.SWASH_TOKEN;
+            isSwash = true;
+        }
+        else {
+            const tokenContract = new contracts_1.Contract(tokenAddress, erc20_abi_1.ERC20_ABI, this.provider);
+            const tokenSymbol = await tokenContract.symbol();
+            const tokenDecimals = await tokenContract.decimals();
+            const tokenName = await tokenContract.name();
+            token = new sdk_core_1.Token(Number(this.networkID), tokenAddress, Number(tokenDecimals.toString()), tokenSymbol, tokenName);
+        }
         return {
-            tokenName: tokenMap[0],
-            tokenAddress,
-            isNative: tokenMap[2],
+            token,
+            isNative,
             isSwash,
         };
     }
+    async getToken(tokenName) {
+        const tokenMap = await this.purchaseContract.tokenMap(tokenName);
+        const tokenAddress = tokenMap[1];
+        const baseTokenAddress = await this.purchaseContract.baseTokenAddress();
+        const baseTokenContract = new contracts_1.Contract(baseTokenAddress, erc20_abi_1.ERC20_ABI, this.provider);
+        const baseTokenDecimals = await baseTokenContract.decimals();
+        const tokenInfo = await this.getTokenOut(tokenAddress, tokenMap[2]);
+        return {
+            ...tokenInfo,
+            baseTokenDecimals,
+        };
+    }
     async needToBeApproved(token, account) {
-        const tokenContract = new contracts_1.Contract(token.tokenAddress, erc20_abi_1.ERC20_ABI, this.signer);
+        const tokenContract = new contracts_1.Contract(token.address, erc20_abi_1.ERC20_ABI, this.signer);
         const allowance = await tokenContract.allowance(account, purchase_config_1.PURCHASE_CONTRACT_ADDRESS[this.networkID]);
-        const ethAllowance = (0, units_1.parseEther)(allowance.toString());
+        const ethAllowance = (0, units_1.parseUnits)(allowance.toString(), token.decimals);
         return ethAllowance.lte(0);
     }
-    async approve(token, account) {
-        if (!token.isNative) {
-            const needToBeApproved = await this.needToBeApproved(token, account);
+    async approve(tokenInfo, account) {
+        if (!tokenInfo.isNative) {
+            const needToBeApproved = await this.needToBeApproved(tokenInfo.token, account);
             if (needToBeApproved) {
-                const tokenContract = new contracts_1.Contract(token.tokenAddress, erc20_abi_1.ERC20_ABI, this.signer);
-                const tx = await tokenContract.approve(purchase_config_1.PURCHASE_CONTRACT_ADDRESS[this.networkID], (0, units_1.parseEther)('999999999999'));
+                const tokenContract = new contracts_1.Contract(tokenInfo.token.address, erc20_abi_1.ERC20_ABI, this.signer);
+                const tx = await tokenContract.approve(purchase_config_1.PURCHASE_CONTRACT_ADDRESS[this.networkID], (0, units_1.parseUnits)('999999999999', tokenInfo.token.decimals));
                 if (tx)
                     await tx.wait();
                 else
@@ -50,21 +73,10 @@ class Purchase {
             }
         }
     }
-    async getRoutePath(token, priceInDollar) {
-        const priceInSwash = await this.purchaseContract.priceInSwash((0, units_1.parseEther)(priceInDollar.toString()));
-        if (token.isSwash) {
-            return [token.tokenAddress, token.tokenAddress];
-        }
-        let tokenOut = null;
-        if (token.isNative) {
-            tokenOut = swash_order_router_1.WRAPPED_NATIVE_CURRENCY[Number(this.networkID)];
-        }
-        else {
-            const tokenContract = new contracts_1.Contract(token.tokenAddress, erc20_abi_1.ERC20_ABI, this.provider);
-            const tokenSymbol = await tokenContract.symbol();
-            const tokenDecimals = await tokenContract.decimals();
-            const tokenName = await tokenContract.name();
-            tokenOut = new sdk_core_1.Token(Number(this.networkID), token.tokenAddress, Number(tokenDecimals.toString()), tokenSymbol, tokenName);
+    async getRoutePath(tokenInfo, priceInDollar) {
+        const priceInSwash = await this.purchaseContract.priceInSwash((0, units_1.parseUnits)(priceInDollar.toString(), tokenInfo.baseTokenDecimals));
+        if (tokenInfo.isSwash) {
+            return [tokenInfo.token.address, tokenInfo.token.address];
         }
         const alphaRouter = new swash_order_router_1.AlphaRouter({
             chainId: Number(this.networkID),
@@ -72,7 +84,7 @@ class Purchase {
         });
         const paths = [];
         const amount = swash_order_router_1.CurrencyAmount.fromRawAmount(this.SWASH_TOKEN, priceInSwash);
-        const routeResult = await alphaRouter.route(amount, tokenOut, sdk_core_1.TradeType.EXACT_OUTPUT, undefined, { protocols: [router_sdk_1.Protocol.V2] });
+        const routeResult = await alphaRouter.route(amount, tokenInfo.token, sdk_core_1.TradeType.EXACT_OUTPUT, undefined, { protocols: [router_sdk_1.Protocol.V2] });
         if (routeResult != null) {
             for (const routeToken of routeResult.route[0].tokenPath) {
                 paths.push(routeToken.address);
@@ -80,15 +92,15 @@ class Purchase {
         }
         return paths;
     }
-    async estimateGas(params, token, routePath) {
+    async estimateGas(params, tokenInfo, routePath) {
         let gas = ethers_1.BigNumber.from(3000000);
         try {
-            if (token.isNative) {
+            if (tokenInfo.isNative) {
                 gas =
                     await this.purchaseContract.estimateGas.buyDataProductWithUniswapEth({
                         requestHash: params.requestHash,
                         timeStamp: params.time,
-                        price: (0, units_1.parseEther)(params.price.toString()),
+                        price: (0, units_1.parseUnits)(params.priceInDollar.toString(), tokenInfo.baseTokenDecimals),
                         productType: params.productType,
                     }, params.signature, params.signer, routePath);
             }
@@ -97,9 +109,9 @@ class Purchase {
                     await this.purchaseContract.estimateGas.buyDataProductWithUniswapErc20({
                         requestHash: params.requestHash,
                         timeStamp: params.time,
-                        price: (0, units_1.parseEther)(params.price.toString()),
+                        price: (0, units_1.parseUnits)(params.priceInDollar.toString(), tokenInfo.baseTokenDecimals),
                         productType: params.productType,
-                    }, params.signature, params.signer, token.tokenName, routePath);
+                    }, params.signature, params.signer, tokenInfo.token.name, routePath);
             }
         }
         catch (err) {
@@ -108,12 +120,12 @@ class Purchase {
         }
         return gas.mul(120).div(100);
     }
-    async request(params, token, routePath, gasLimit) {
-        if (token.isNative) {
+    async request(params, tokenInfo, routePath, gasLimit) {
+        if (tokenInfo.isNative) {
             return await this.purchaseContract.buyDataProductWithUniswapEth({
                 requestHash: params.requestHash,
                 timeStamp: params.time,
-                price: (0, units_1.parseEther)(params.price.toString()),
+                price: (0, units_1.parseUnits)(params.priceInDollar.toString(), tokenInfo.baseTokenDecimals),
                 productType: params.productType,
             }, params.signature, params.signer, routePath, { gasLimit });
         }
@@ -121,9 +133,9 @@ class Purchase {
             return await this.purchaseContract.buyDataProductWithUniswapErc20({
                 requestHash: params.requestHash,
                 timeStamp: params.time,
-                price: (0, units_1.parseEther)(params.price.toString()),
+                price: (0, units_1.parseUnits)(params.priceInDollar.toString(), tokenInfo.baseTokenDecimals),
                 productType: params.productType,
-            }, params.signature, params.signer, token.tokenName, routePath, { gasLimit });
+            }, params.signature, params.signer, tokenInfo.token.name, routePath, { gasLimit });
         }
     }
 }

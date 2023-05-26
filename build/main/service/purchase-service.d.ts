@@ -7,10 +7,11 @@ export declare class Purchase {
     private signer;
     private SWASH_TOKEN;
     constructor(networkID: string, provider: providers.BaseProvider, signer: Signer);
+    private getTokenOut;
     getToken(tokenName: string): Promise<TokenInfo>;
     private needToBeApproved;
-    approve(token: TokenInfo, account: string | null | undefined): Promise<any>;
-    getRoutePath(token: TokenInfo, priceInDollar: number): Promise<Array<string>>;
-    estimateGas(params: PurchaseParams, token: TokenInfo, routePath: string[]): Promise<any>;
-    request(params: PurchaseParams, token: TokenInfo, routePath: string[], gasLimit: BigNumber): Promise<any>;
+    approve(tokenInfo: TokenInfo, account: string | null | undefined): Promise<any>;
+    getRoutePath(tokenInfo: TokenInfo, priceInDollar: number): Promise<Array<string>>;
+    estimateGas(params: PurchaseParams, tokenInfo: TokenInfo, routePath: string[]): Promise<any>;
+    request(params: PurchaseParams, tokenInfo: TokenInfo, routePath: string[], gasLimit: BigNumber): Promise<any>;
 }

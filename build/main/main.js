@@ -109,7 +109,7 @@ class sComputeClient {
                         })
                             .then(async (res) => {
                             try {
-                                const routePath = await purchase.getRoutePath(token, res.price);
+                                const routePath = await purchase.getRoutePath(token, res.priceInDollar);
                                 const gasLimit = await purchase.estimateGas(res, token, routePath);
                                 const tx = await purchase.request(res, token, routePath, gasLimit);
                                 if (tx) {
