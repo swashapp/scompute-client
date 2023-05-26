@@ -1,5 +1,5 @@
 import { Contract } from '@ethersproject/contracts';
-import { parseEther } from '@ethersproject/units';
+import { parseUnits } from '@ethersproject/units';
 import { Protocol } from '@uniswap/router-sdk';
 import { Token, TradeType } from '@uniswap/sdk-core';
 
@@ -52,76 +52,23 @@ export class Purchase {
     );
   }
 
-  public async getToken(tokenName: string): Promise<TokenInfo> {
-    const tokenMap = await this.purchaseContract.tokenMap(tokenName);
-    const tokenAddress = tokenMap[1];
-    const isSwash =
-      tokenAddress?.toLowerCase() ===
-      SWASH_TOKEN_ADDRESS[this.networkID].toLowerCase();
-    return {
-      tokenName: tokenMap[0],
-      tokenAddress,
-      isNative: tokenMap[2],
-      isSwash,
-    };
-  }
+  private async getTokenOut(
+    tokenAddress: string,
+    isNative: boolean,
+  ): Promise<{ token: Token; isNative: boolean; isSwash: boolean }> {
+    let token = null;
+    let isSwash = false;
 
-  private async needToBeApproved(
-    token: TokenInfo,
-    account: string | null | undefined,
-  ): Promise<boolean> {
-    const tokenContract = new Contract(
-      token.tokenAddress,
-      ERC20_ABI,
-      this.signer,
-    );
-    const allowance = await tokenContract.allowance(
-      account,
-      PURCHASE_CONTRACT_ADDRESS[this.networkID],
-    );
-    const ethAllowance = parseEther(allowance.toString());
-    return ethAllowance.lte(0);
-  }
-
-  public async approve(
-    token: TokenInfo,
-    account: string | null | undefined,
-  ): Promise<any> {
-    if (!token.isNative) {
-      const needToBeApproved = await this.needToBeApproved(token, account);
-      if (needToBeApproved) {
-        const tokenContract = new Contract(
-          token.tokenAddress,
-          ERC20_ABI,
-          this.signer,
-        );
-        const tx = await tokenContract.approve(
-          PURCHASE_CONTRACT_ADDRESS[this.networkID],
-          parseEther('999999999999'),
-        );
-        if (tx) await tx.wait();
-        else throw Error('Failed to approve');
-      }
-    }
-  }
-
-  public async getRoutePath(
-    token: TokenInfo,
-    priceInDollar: number,
-  ): Promise<Array<string>> {
-    const priceInSwash = await this.purchaseContract.priceInSwash(
-      parseEther(priceInDollar.toString()),
-    );
-    if (token.isSwash) {
-      return [token.tokenAddress, token.tokenAddress];
-    }
-    let tokenOut = null;
-
-    if (token.isNative) {
-      tokenOut = WRAPPED_NATIVE_CURRENCY[Number(this.networkID)];
+    if (isNative) {
+      token = (WRAPPED_NATIVE_CURRENCY as any)[Number(this.networkID)];
+    } else if (
+      tokenAddress.toLowerCase() === this.SWASH_TOKEN.address.toLowerCase()
+    ) {
+      token = this.SWASH_TOKEN;
+      isSwash = true;
     } else {
       const tokenContract = new Contract(
-        token.tokenAddress,
+        tokenAddress,
         ERC20_ABI,
         this.provider,
       );
@@ -130,13 +77,89 @@ export class Purchase {
       const tokenDecimals = await tokenContract.decimals();
       const tokenName = await tokenContract.name();
 
-      tokenOut = new Token(
+      token = new Token(
         Number(this.networkID),
-        token.tokenAddress,
+        tokenAddress,
         Number(tokenDecimals.toString()),
         tokenSymbol,
         tokenName,
       );
+    }
+    return {
+      token,
+      isNative,
+      isSwash,
+    };
+  }
+
+  public async getToken(tokenName: string): Promise<TokenInfo> {
+    const tokenMap = await this.purchaseContract.tokenMap(tokenName);
+    const tokenAddress = tokenMap[1];
+
+    const baseTokenAddress = await this.purchaseContract.baseTokenAddress();
+    const baseTokenContract = new Contract(
+      baseTokenAddress,
+      ERC20_ABI,
+      this.provider,
+    );
+
+    const baseTokenDecimals = await baseTokenContract.decimals();
+
+    const tokenInfo = await this.getTokenOut(tokenAddress, tokenMap[2]);
+
+    return {
+      ...tokenInfo,
+      baseTokenDecimals,
+    };
+  }
+
+  private async needToBeApproved(
+    token: Token,
+    account: string | null | undefined,
+  ): Promise<boolean> {
+    const tokenContract = new Contract(token.address, ERC20_ABI, this.signer);
+    const allowance = await tokenContract.allowance(
+      account,
+      PURCHASE_CONTRACT_ADDRESS[this.networkID],
+    );
+    const ethAllowance = parseUnits(allowance.toString(), token.decimals);
+    return ethAllowance.lte(0);
+  }
+
+  public async approve(
+    tokenInfo: TokenInfo,
+    account: string | null | undefined,
+  ): Promise<any> {
+    if (!tokenInfo.isNative) {
+      const needToBeApproved = await this.needToBeApproved(
+        tokenInfo.token,
+        account,
+      );
+      if (needToBeApproved) {
+        const tokenContract = new Contract(
+          tokenInfo.token.address,
+          ERC20_ABI,
+          this.signer,
+        );
+        const tx = await tokenContract.approve(
+          PURCHASE_CONTRACT_ADDRESS[this.networkID],
+          parseUnits('999999999999', tokenInfo.token.decimals),
+        );
+        if (tx) await tx.wait();
+        else throw Error('Failed to approve');
+      }
+    }
+  }
+
+  public async getRoutePath(
+    tokenInfo: TokenInfo,
+    priceInDollar: number,
+  ): Promise<Array<string>> {
+    const priceInSwash = await this.purchaseContract.priceInSwash(
+      parseUnits(priceInDollar.toString(), tokenInfo.baseTokenDecimals),
+    );
+    if (tokenInfo.isSwash) {
+      return [tokenInfo.token.address, tokenInfo.token.address];
     }
     const alphaRouter = new AlphaRouter({
       chainId: Number(this.networkID),
@@ -149,7 +172,7 @@ export class Purchase {
     // debugger
     const routeResult: SwapRoute | null = await alphaRouter.route(
       amount,
-      tokenOut,
+      tokenInfo.token,
       TradeType.EXACT_OUTPUT,
       undefined,
       { protocols: [Protocol.V2] },
@@ -165,18 +188,21 @@ export class Purchase {
 
   public async estimateGas(
     params: PurchaseParams,
-    token: TokenInfo,
+    tokenInfo: TokenInfo,
     routePath: string[],
   ): Promise<any> {
     let gas: BigNumber = BigNumber.from(3000000);
     try {
-      if (token.isNative) {
+      if (tokenInfo.isNative) {
         gas =
           await this.purchaseContract.estimateGas.buyDataProductWithUniswapEth(
             {
               requestHash: params.requestHash,
               timeStamp: params.time,
-              price: parseEther(params.price.toString()),
+              price: parseUnits(
+                params.priceInDollar.toString(),
+                tokenInfo.baseTokenDecimals,
+              ),
               productType: params.productType,
             },
             params.signature,
@@ -189,12 +215,15 @@ export class Purchase {
             {
               requestHash: params.requestHash,
               timeStamp: params.time,
-              price: parseEther(params.price.toString()),
+              price: parseUnits(
+                params.priceInDollar.toString(),
+                tokenInfo.baseTokenDecimals,
+              ),
               productType: params.productType,
             },
             params.signature,
             params.signer,
-            token.tokenName,
+            tokenInfo.token.name,
             routePath,
           );
       }
@@ -207,16 +236,19 @@ export class Purchase {
 
   public async request(
     params: PurchaseParams,
-    token: TokenInfo,
+    tokenInfo: TokenInfo,
     routePath: string[],
     gasLimit: BigNumber,
   ): Promise<any> {
-    if (token.isNative) {
+    if (tokenInfo.isNative) {
       return await this.purchaseContract.buyDataProductWithUniswapEth(
         {
           requestHash: params.requestHash,
           timeStamp: params.time,
-          price: parseEther(params.price.toString()),
+          price: parseUnits(
+            params.priceInDollar.toString(),
+            tokenInfo.baseTokenDecimals,
+          ),
           productType: params.productType,
         },
         params.signature,
@@ -229,12 +261,15 @@ export class Purchase {
         {
           requestHash: params.requestHash,
           timeStamp: params.time,
-          price: parseEther(params.price.toString()),
+          price: parseUnits(
+            params.priceInDollar.toString(),
+            tokenInfo.baseTokenDecimals,
+          ),
           productType: params.productType,
         },
         params.signature,
         params.signer,
-        token.tokenName,
+        tokenInfo.token.name,
         routePath,
         { gasLimit },
       );

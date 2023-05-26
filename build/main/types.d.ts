@@ -1,12 +1,13 @@
 /// <reference types="node" />
 import { Blob } from 'buffer';
+import { Token } from '@uniswap/sdk-core';
 import { providers } from 'ethers';
 import Web3 from 'web3';
 export interface TokenInfo {
-    tokenName: string;
-    tokenAddress: string;
+    token: Token;
     isNative: boolean;
     isSwash: boolean;
+    baseTokenDecimals: number;
 }
 export interface PurchaseToken {
     tokenName: string;
@@ -131,6 +132,6 @@ export interface PurchaseParams {
     signature: string;
     time: string;
     productType: string;
-    price: number;
+    priceInDollar: number;
     signer: string;
 }
