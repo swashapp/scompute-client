@@ -95,10 +95,13 @@ class Request {
             if (payload.status === 'error' || payload.message) {
                 message = payload.message;
             }
+            else if (resp.status >= 400) {
+                message = resp.statusText;
+            }
             if (payload.status === 'expired') {
                 if (this.session?.onExpired)
                     this.session.onExpired();
-                throw Error(`Session is expired`);
+                message = 'Session expired';
             }
         }
         catch (err) {
