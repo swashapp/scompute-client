@@ -1,0 +1,31 @@
+name: semantic release | publish in main branch
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.5.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3.6.0
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: yarn add --dev semantic-release@21.0.2 @semantic-release/exec@6.0.3
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npx semantic-release --debug
