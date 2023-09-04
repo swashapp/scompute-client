@@ -1,5 +1,5 @@
 {
-  "name": "scompute-client",
+  "name": "@swashapp/scompute-client",
   "version": "0.0.0-semantic-release",
   "description": "",
   "private": false,
